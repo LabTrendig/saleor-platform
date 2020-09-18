@@ -1,3 +1,25 @@
+acciones
+    
+    hacer push remote
+    
+    git push fork
+    
+    hacer push repositorio original 
+    
+    git push origin
+    
+    actulizar nueva version en master
+    
+    git pull origin
+    git submodule update --init --recursive
+
+    realizar merge a la rama corespondiente con los nuevos cambios
+    
+    subir cambios al fork
+    
+    git push fork
+    
+
 # saleor-platform
 All Saleor services started from a single repository
 
