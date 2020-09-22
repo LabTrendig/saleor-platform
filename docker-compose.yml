@@ -1,28 +1,20 @@
-version: '2'
+version: '3.6'
 
 services:
   api:
+    image: registry.gitlab.com/trendig-it/ops/backend:develop
     ports:
-      - 8000:8000
-    build:
-      context: ./saleor
-      dockerfile: ./Dockerfile
-      args:
-        STATIC_URL: '/static/'
-    restart: unless-stopped
+      - "8000:8000"
     networks:
       - saleor-backend-tier
-    depends_on:
-      - db
-      - redis
-      - jaeger
+    links:
+      - "db:db"
+      - "redis:redis"
+      - "jaeger:jaeger"
+      - "storefront:storefront"
+      - "dashboard:dashboard"
     volumes:
-      - ./saleor/saleor/:/app/saleor:Z
-      - ./saleor/templates/:/app/templates:Z
-      - ./saleor/tests/:/app/tests
-      # shared volume between worker and api for media
-      - saleor-media:/app/media
-    command: python manage.py runserver 0.0.0.0:8000
+      - "./saleor:/app"
     env_file: common.env
     environment:
       - JAEGER_AGENT_HOST=jaeger
@@ -34,11 +26,10 @@ services:
       context: ./saleor-storefront
       dockerfile: ./Dockerfile.dev
     ports:
-      - 3000:3000
-    restart: unless-stopped
+      - "3000:3000"
     volumes:
-      - ./saleor-storefront/:/app:cached
-      - /app/node_modules/
+      - "./saleor-storefront/:/app:cached"
+      - "/app/node_modules/"
     command: npm start -- --host 0.0.0.0
 
   dashboard:
@@ -46,22 +37,20 @@ services:
       context: ./saleor-dashboard
       dockerfile: ./Dockerfile.dev
     ports:
-      - 9000:9000
-    restart: unless-stopped
+      - "9000:9000"
     volumes:
-      - ./saleor-dashboard/:/app:cached
-      - /app/node_modules/
+      - "./saleor-dashboard/:/app:cached"
+      - "/app/node_modules/"
     command: npm start -- --host 0.0.0.0
 
   db:
     image: library/postgres:11.1-alpine
     ports:
-      - 5432:5432
-    restart: unless-stopped
+      - "5432:5432"
     networks:
       - saleor-backend-tier
     volumes:
-      - saleor-db:/var/lib/postgresql
+      - "saleor-db:/var/lib/postgresql"
     environment:
       - POSTGRES_USER=saleor
       - POSTGRES_PASSWORD=saleor
@@ -69,12 +58,11 @@ services:
   redis:
     image: library/redis:5.0-alpine
     ports:
-      - 6379:6379
-    restart: unless-stopped
+      - "6379:6379"
     networks:
       - saleor-backend-tier
     volumes:
-      - saleor-redis:/data
+      - "saleor-redis:/data"
 
   worker:
     build:
@@ -83,18 +71,17 @@ services:
       args:
         STATIC_URL: '/static/'
     command: celery -A saleor worker --app=saleor.celeryconf:app --loglevel=info
-    restart: unless-stopped
     networks:
       - saleor-backend-tier
     env_file: common.env
-    depends_on:
-      - redis
-      - mailhog
+    links:
+      - "redis:redis"
+      - "mailhog:mailhog"
     volumes:
-      - ./saleor/saleor/:/app/saleor:Z,cached
-      - ./saleor/templates/:/app/templates:Z,cached
+      - "./saleor/saleor/:/app/saleor:Z,cached"
+      - "./saleor/templates/:/app/templates:Z,cached"
       # shared volume between worker and api for media
-      - saleor-media:/app/media
+      - "saleor-media:/app/media"
     environment:
       - EMAIL_URL=smtp://mailhog:1025
 
@@ -108,16 +95,14 @@ services:
       - "16686:16686"
       - "14268:14268"
       - "9411:9411"
-    restart: unless-stopped
     networks:
       - saleor-backend-tier
 
   mailhog:
     image: mailhog/mailhog
-    ports: 
-      - 1025:1025 # smtp server
-      - 8025:8025 # web ui. Visit http://localhost:8025/ to check emails
-    restart: unless-stopped
+    ports:
+      - "1025:1025" # smtp server
+      - "8025:8025" # web ui. Visit http://localhost:8025/ to check emails
     networks:
       - saleor-backend-tier
 
